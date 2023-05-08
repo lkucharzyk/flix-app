@@ -1,8 +1,17 @@
 
 
 const state ={
-    currentPage: window.location.pathname
-
+    currentPage: window.location.pathname,
+    search: {
+      term: '',
+      type: '',
+      page: 1,
+      totalPages: 1
+    },
+    API:{
+      APIKey : '9bdba24599e2e9c77fcd3fd09d83c7eb',
+      APIURL : 'https://api.themoviedb.org/3/'
+    }
 }
 
 //highlight active link
@@ -17,17 +26,65 @@ function highlightActiveLink(){
 }
 
 async function fetchAPIData(endpoint){
-    const APIKey = '9bdba24599e2e9c77fcd3fd09d83c7eb';
-    const APIURL = 'https://api.themoviedb.org/3/';
     showSpinner();
     
-    const res = await fetch(`${APIURL}${endpoint}?api_key=${APIKey}&language=pl-PL`);
+    const res = await fetch(`${state.API.APIURL}${endpoint}?api_key=${state.API.APIKey}&language=pl-PL`);
     const data = await res.json();
 
     hideSpinner();
     return data;
 }
 
+
+async function displaySlider(){
+  const {results} = await fetchAPIData('movie/now_playing');
+  console.log(results);
+  results.forEach(movie =>{
+    const slide = document.createElement('div');
+    slide.classList.add('swiper-slide');
+    slide.innerHTML = `<a href="movie-details.html?id=${movie.id}">
+    <img  ${
+      movie.poster_path ? 
+   `src="https://image.tmdb.org/t/p/w500${movie.poster_path}"
+    alt="${movie.title}"`:
+
+    `src="images/no-image.jpg"
+        alt="${movie.title}"`
+  } />
+  </a>
+  <h4 class="swiper-rating">
+    <i class="fas fa-star text-secondary"></i> ${movie.vote_average.toFixed(2)}
+  </h4>`
+    document.querySelector('.swiper-wrapper').appendChild(slide);
+  })
+
+  initSwiper();
+}
+
+function initSwiper(){
+  const swiper = new Swiper('.swiper', {
+    slidesPerView: 1,
+    spaceBetween: 300,
+    freeMode:true,
+    loop: true,
+    autoplay: {
+      delay: 2000,
+    },
+    speed: 400,
+    spaceBetween: 100,
+    breakpoints: {
+      500:{
+        slidesPerView: 2
+      },
+      700:{
+        slidesPerView: 3
+      },
+      1200:{
+        slidesPerView: 4
+      },
+    }
+  });
+}
 
 
 async function displayPopularMovies(){
@@ -239,6 +296,65 @@ async function displayShowDetails() {
   
   }
 
+  async function search(){
+    const queryString = window.location.search;
+    const searchPar =  new URLSearchParams(queryString);
+    state.search.type = searchPar.get('type');
+    state.search.term = searchPar.get('search-term');
+
+    if(state.search.term !== '' && state.search.term !== null){
+        const {results, total_pages, page} = await serachAPIData();
+        
+        if(results.length === 0){
+          showAlert('Sorry, no results');
+          return;
+        }
+        displaySearchResults(results);
+        document.querySelector('input').value ='';
+    }else{
+      showAlert('Please enter search term', '.alert-error');
+    }
+  }
+
+  function displaySearchResults(results){
+    results.forEach(movie =>{
+      const movieCard = document.createElement('div');
+      movieCard.classList.add('card');
+      movieCard.innerHTML = `<a href="${state.search.type}-details.html?id=${movie.id}">
+      <img
+      ${
+          movie.poster_path ? 
+       `src="https://image.tmdb.org/t/p/w500${movie.poster_path}"
+        class="card-img-top"
+        alt="${ state.search.type === 'movie' ? movie.title : movie.name}"`:
+
+        ` src="images/no-image.jpg"
+            class="card-img-top"
+            alt="${ state.search.type === 'movie' ? movie.title : movie.name}"`
+      }
+      />
+    </a>
+    <div class="card-body">
+      <h5 class="card-title">${ state.search.type === 'movie' ? movie.title : movie.name}</h5>
+      <p class="card-text">
+        <small class="text-muted">Release: ${ state.search.type === 'movie' ? movie.release_date : movie.first_air_date}</small>
+      </p>
+    </div>`
+    document.querySelector('#search-results').appendChild(movieCard);
+  })
+  }
+
+
+async function serachAPIData(){
+  showSpinner();
+    
+    const res = await fetch(`${state.API.APIURL}search/${state.search.type}?api_key=${state.API.APIKey}&language=pl-PL&query=${state.search.term}`);
+    const data = await res.json();
+
+    hideSpinner();
+    return data;
+} 
+
 function displayBackgroundImage(type, path){
     const overlayDiv = document.createElement('div');
     overlayDiv.style.backgroundImage = `url(https://image.tmdb.org/t/p/original/${path})`;
@@ -260,6 +376,14 @@ function displayBackgroundImage(type, path){
     }
 }
 
+function showAlert(message, className){
+  const alert = document.createElement('div');
+  alert.classList.add('alert', className);
+  alert.appendChild(document.createTextNode(message));
+  document.querySelector('#alert').appendChild(alert);
+  setTimeout(()=> alert.remove(), 2500);
+}
+
 function showSpinner(){
     const spinnner = document.querySelector('.spinner');
     spinnner.classList.add('show');
@@ -274,6 +398,7 @@ function init(){
     switch (state.currentPage){
         case '/':
         case '/index.html':
+            displaySlider()
             displayPopularMovies();
         break;
         case '/shows.html':
@@ -285,8 +410,8 @@ function init(){
         case '/tv-details.html':
             displayShowDetails();
         break;
-        case 'search.html':
-
+        case '/search.html':
+          search();
         break;
     }
     highlightActiveLink()
