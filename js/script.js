@@ -6,10 +6,11 @@ const state ={
       term: '',
       type: '',
       page: 1,
-      totalPages: 1
+      totalPages: 1,
+      totalResults: 0
     },
     API:{
-      APIKey : '9bdba24599e2e9c77fcd3fd09d83c7eb',
+      APIKey : 'placeholder',
       APIURL : 'https://api.themoviedb.org/3/'
     }
 }
@@ -303,12 +304,17 @@ async function displayShowDetails() {
     state.search.term = searchPar.get('search-term');
 
     if(state.search.term !== '' && state.search.term !== null){
-        const {results, total_pages, page} = await serachAPIData();
+        const {results, total_pages, page, total_results} = await serachAPIData();
+
+        state.search.page = page;
+        state.search.totalPages = total_pages;
+        state.search.totalResults = total_results;
         
         if(results.length === 0){
           showAlert('Sorry, no results');
           return;
         }
+
         displaySearchResults(results);
         document.querySelector('input').value ='';
     }else{
@@ -317,6 +323,10 @@ async function displayShowDetails() {
   }
 
   function displaySearchResults(results){
+    document.querySelector('#search-results').innerHTML = '';
+
+    document.querySelector('#search-results-heading').innerHTML =`<h2>${results.length} of ${state.search.totalResults} for ${state.search.term}</h2>`;
+
     results.forEach(movie =>{
       const movieCard = document.createElement('div');
       movieCard.classList.add('card');
@@ -340,15 +350,47 @@ async function displayShowDetails() {
         <small class="text-muted">Release: ${ state.search.type === 'movie' ? movie.release_date : movie.first_air_date}</small>
       </p>
     </div>`
-    document.querySelector('#search-results').appendChild(movieCard);
-  })
+      document.querySelector('#search-results').appendChild(movieCard);
+    })
+
+    displayPagination();
   }
 
+  function displayPagination(){
+    document.querySelector('#pagination').innerHTML = '';
+
+    const div = document.createElement('div');
+    div.classList.add('pagination')
+    div.innerHTML = `<button class="btn btn-primary" id="prev">Prev</button>
+    <button class="btn btn-primary" id="next">Next</button>
+    <div class="page-counter">Page ${state.search.page} of ${state.search.totalPages} </div>`
+
+    document.querySelector('#pagination').appendChild(div);
+
+    if(state.search.page === 1){
+        document.querySelector('#prev').disabled = true;
+    }
+    if(state.search.page === state.search.totalPages){
+      document.querySelector('#next').disabled = true;
+   }
+
+   document.querySelector('#next').addEventListener('click', async ()=>{
+      state.search.page ++;
+      const {results, total_pages} = await serachAPIData();
+      displaySearchResults(results);
+   })
+
+   document.querySelector('#prev').addEventListener('click', async ()=>{
+    state.search.page --;
+    const {results, total_pages} = await serachAPIData();
+    displaySearchResults(results);
+ })
+  }
 
 async function serachAPIData(){
   showSpinner();
     
-    const res = await fetch(`${state.API.APIURL}search/${state.search.type}?api_key=${state.API.APIKey}&language=pl-PL&query=${state.search.term}`);
+    const res = await fetch(`${state.API.APIURL}search/${state.search.type}?api_key=${state.API.APIKey}&language=pl-PL&query=${state.search.term}&page=${state.search.page}`);
     const data = await res.json();
 
     hideSpinner();
