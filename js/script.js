@@ -17,7 +17,7 @@ function highlightActiveLink(){
 }
 
 async function fetchAPIData(endpoint){
-    const APIKey = '9bdba24599e2e9c77fcd3fd09d83c7eb';
+    const APIKey = 'placeholder';
     const APIURL = 'https://api.themoviedb.org/3/';
     showSpinner();
     
@@ -89,6 +89,64 @@ async function displayPopularShows(){
     })
 }
 
+async function displayMovieDetails(){
+    const movieId = window.location.search.split('=')[1];
+    const results = await fetchAPIData('movie/' + movieId);
+    console.log(results);
+    const div = document.createElement('div');
+    div.setAttribute('id', 'movie-details');
+    div.innerHTML = `<div class="details-top">
+    <div>
+    <img
+    ${
+        results.poster_path ? 
+     `src="https://image.tmdb.org/t/p/w500${results.poster_path}"
+      class="card-img-top"
+      alt="${results.title}"`:
+
+      ` src="images/no-image.jpg"
+          class="card-img-top"
+          alt="${results.title}"`
+    }
+    >
+    </div>
+    <div>
+      <h2>${results.title}</h2>
+      <p>
+        <i class="fas fa-star text-primary"></i>
+        ${results.vote_average.toFixed(2)}
+      </p>
+      <p class="text-muted">Release Date: ${results.release_date}</p>
+      <p>
+        ${results.overview}
+      </p>
+      <h5>Genres</h5>
+      <ul class="list-group">
+        ${results.genres.map((genre)=> `<li>${genre.name}</li>`).join('')}
+      </ul>
+      ${ results.homepage ? 
+        `<a href="${results.homepage }" target="_blank" class="btn">Visit Movie Homepage</a>` : ''
+      }
+    </div>
+  </div>
+  <div class="details-bottom">
+    <h2>Movie Info</h2>
+    <ul>
+      <li><span class="text-secondary">Budget:</span> $${results.budget}</li>
+      <li><span class="text-secondary">Revenue:</span> $${results.revenue}</li>
+      <li><span class="text-secondary">Runtime:</span> ${results.runtime} minutes</li>
+      <li><span class="text-secondary">Status:</span> ${results.status} </li>
+    </ul>
+    <h4>Production Companies</h4>
+    <div class="list-group">
+      ${results.production_companies.map(company => company.name).join(', ')}
+    </div>
+  </div>
+  </div>
+  `;
+    document.querySelector('.main').appendChild(div);
+}
+
 function showSpinner(){
     const spinnner = document.querySelector('.spinner');
     spinnner.classList.add('show');
@@ -109,7 +167,7 @@ function init(){
             displayPopularShows();
         break;
         case '/movie-details.html':
-
+            displayMovieDetails();
         break;
         case 'tv-details.html':
 
